@@ -761,13 +761,6 @@ static long bpf_struct_ops_map_update_elem(struct bpf_map *map, void *key,
 
 	err = st_ops->reg(kdata, NULL);
 	if (likely(!err)) {
-		/* This refcnt increment on the map here after
-		 * 'st_ops->reg()' is secure since the state of the
-		 * map must be set to INIT at this moment, and thus
-		 * bpf_struct_ops_map_delete_elem() can't unregister
-		 * or transition it to TOBEFREE concurrently.
-		 */
-		bpf_map_inc(map);
 		/* Pair with smp_load_acquire() during lookup_elem().
 		 * It ensures the above udata updates (e.g. prog->aux->id)
 		 * can be seen once BPF_STRUCT_OPS_STATE_INUSE is set.
@@ -808,7 +801,6 @@ static long bpf_struct_ops_map_delete_elem(struct bpf_map *map, void *key)
 	switch (prev_state) {
 	case BPF_STRUCT_OPS_STATE_INUSE:
 		st_map->st_ops_desc->st_ops->unreg(&st_map->kvalue.data, NULL);
-		bpf_map_put(map);
 		return 0;
 	case BPF_STRUCT_OPS_STATE_TOBEFREE:
 		return -EINPROGRESS;
