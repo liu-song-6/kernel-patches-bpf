@@ -164,6 +164,20 @@ __bpf_kfunc void bpf_iput(struct inode *inode)
 	iput(inode);
 }
 
+/**
+ * bpf_is_subdir - is new dentry a subdirectory of old_dentry
+ * @new_dentry: new dentry
+ * @old_dentry: old dentry
+ *
+ * Returns true if new_dentry is a subdirectory of the parent (at any depth).
+ * Returns false otherwise.
+ * Caller must ensure that "new_dentry" is pinned before calling is_subdir()
+ */
+__bpf_kfunc bool bpf_is_subdir(struct dentry *new_dentry, struct dentry *old_dentry)
+{
+	return is_subdir(new_dentry, old_dentry);
+}
+
 __bpf_kfunc_end_defs();
 
 BTF_KFUNCS_START(bpf_fs_kfunc_set_ids)
@@ -174,6 +188,7 @@ BTF_ID_FLAGS(func, bpf_path_d_path, KF_TRUSTED_ARGS)
 BTF_ID_FLAGS(func, bpf_get_dentry_xattr, KF_SLEEPABLE | KF_TRUSTED_ARGS)
 BTF_ID_FLAGS(func, bpf_get_file_xattr, KF_SLEEPABLE | KF_TRUSTED_ARGS)
 BTF_ID_FLAGS(func, bpf_iput, KF_RELEASE)
+BTF_ID_FLAGS(func, bpf_is_subdir, KF_TRUSTED_ARGS)
 BTF_KFUNCS_END(bpf_fs_kfunc_set_ids)
 
 static int bpf_fs_kfuncs_filter(const struct bpf_prog *prog, u32 kfunc_id)

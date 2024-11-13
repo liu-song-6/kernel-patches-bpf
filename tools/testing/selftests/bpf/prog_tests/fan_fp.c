@@ -192,16 +192,23 @@ static void test_monitor_subtree(void)
 	int test_root_fd;
 	__u32 one = 1;
 	int err, fanotify_fd;
+	struct stat st;
 
 	test_root_fd = create_test_subtree();
 
 	if (!ASSERT_OK_FD(test_root_fd, "create_test_subtree"))
 		return;
 
+	err = fstat(test_root_fd, &st);
+	if (!ASSERT_OK(err, "fstat test_root_fd"))
+		goto close_test_root_fd;
+
 	skel = fan_fp__open_and_load();
 
 	if (!ASSERT_OK_PTR(skel, "fan_fp__open_and_load"))
 		goto close_test_root_fd;
+
+	skel->bss->root_ino = st.st_ino;
 
 	/* Add tag to /tmp/fanotify_test/ */
 	err = bpf_map_update_elem(bpf_map__fd(skel->maps.inode_storage_map),

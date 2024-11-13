@@ -8,6 +8,31 @@
 #define FS_CREATE		0x00000100	/* Subfile was created */
 #define FS_ISDIR		0x40000000	/* event occurred against dir */
 
+struct __tasks_kfunc_map_value {
+	struct inode __kptr * task;
+};
+
+struct inode *__some_inode;
+struct task_struct *__some_task;
+
+struct {
+	__uint(type, BPF_MAP_TYPE_HASH);
+	__type(key, int);
+	__type(value, struct __tasks_kfunc_map_value);
+	__uint(max_entries, 1);
+} __tasks_kfunc_map SEC(".maps");
+
+/* struct __inode_kptr_value { */
+/* 	struct inode __kptr *task_struct; */
+/* }; */
+
+/* struct { */
+/* 	__uint(type, BPF_MAP_TYPE_HASH); */
+/* 	__type(key, int); */
+/* 	__type(value, struct __inode_kptr_value); */
+/* 	__uint(max_entries, 1); */
+/* } subdir_root SEC(".maps"); */
+
 struct {
 	__uint(type, BPF_MAP_TYPE_INODE_STORAGE);
 	__uint(map_flags, BPF_F_NO_PREALLOC);
@@ -16,6 +41,35 @@ struct {
 } inode_storage_map SEC(".maps");
 
 int added_inode_storage;
+unsigned long root_ino;
+bool initialized;
+
+static void initialize_subdir_root(struct fanotify_fastpath_event *fp_event)
+{
+	/* struct __inode_kptr_value *v; */
+	/* struct inode *inode, *old; */
+	/* int zero = 0; */
+
+	if (initialized)
+		return;
+
+	/* inode = bpf_fanotify_data_inode(fp_event); */
+	/* if (inode) */
+	/* 	return; */
+
+	/* if (inode->i_ino != root_ino) { */
+	/* 	bpf_iput(inode); */
+	/* 	return; */
+	/* } */
+
+	/* v = bpf_map_lookup_elem(&subdir_root, &zero); */
+	/* if (v) { */
+	/* 	old = bpf_kptr_xchg(&v->inode, inode); */
+	/* 	if (old) */
+	/* 		bpf_iput(old); */
+	/* 	initialized = true; */
+	/* } */
+}
 
 SEC("struct_ops")
 int BPF_PROG(bpf_fp_handler,
@@ -25,6 +79,8 @@ int BPF_PROG(bpf_fp_handler,
 {
 	struct inode *dir;
 	__u32 *value;
+
+	initialize_subdir_root(fp_event);
 
 	dir = fp_event->dir;
 
